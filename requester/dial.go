@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"net"
+	"strconv"
 	"time"
 )
 
@@ -15,6 +16,37 @@ var (
 	}
 )
 
+func getServerName(address string) string {
+	host, _, err := net.SplitHostPort(address)
+	if err != nil {
+		return address
+	}
+	return host
+}
+
+func resolveTCP(ctx context.Context, address string) (tcpaddr *net.TCPAddr, err error) {
+	host, port, err := net.SplitHostPort(address)
+	if err != nil {
+		return
+	}
+
+	addrs, err := net.DefaultResolver.LookupIPAddr(ctx, host)
+	if err != nil {
+		return
+	}
+
+	p, err := strconv.Atoi(port)
+	if err != nil {
+		return
+	}
+
+	return &net.TCPAddr{
+		IP:   addrs[0].IP,
+		Port: p,
+		Zone: addrs[0].Zone,
+	}, nil
+}
+
 func dialContext(ctx context.Context, network, address string) (conn net.Conn, err error) {
 	switch network {
 	case "tcp", "tcp4", "tcp6":
@@ -24,28 +56,19 @@ func dialContext(ctx context.Context, network, address string) (conn net.Conn, e
 		}
 
 		var (
-			ta   *net.TCPAddr
-			done = make(chan struct{})
+			ta *net.TCPAddr
 		)
 
-		go func() {
-			// Resolve TCP address
-			ta, err = net.ResolveTCPAddr(network, address)
-			close(done)
-		}()
+		// Resolve TCP address
+		ta, err = resolveTCP(ctx, address)
 
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		case <-done:
-			if err != nil {
-				return nil, err
-			}
-
-			// 加入缓存
-			TCPAddrCache.Set(address, ta)
-			return net.DialTCP(network, nil, ta)
+		if err != nil {
+			return nil, err
 		}
+
+		// 加入缓存
+		TCPAddrCache.Set(address, ta)
+		return net.DialTCP(network, nil, ta)
 	}
 
 	// 非 tcp 请求
@@ -57,11 +80,16 @@ func dial(network, address string) (conn net.Conn, err error) {
 	return dialContext(context.Background(), network, address)
 }
 
-func dialTLS(network, address string) (tlsConn net.Conn, err error) {
-	conn, err := dial(network, address)
-	if err != nil {
-		return nil, err
-	}
+func (h *HTTPClient) dialTLSFunc() func(network, address string) (tlsConn net.Conn, err error) {
+	return func(network, address string) (tlsConn net.Conn, err error) {
+		conn, err := dialContext(context.Background(), network, address)
+		if err != nil {
+			return nil, err
+		}
 
-	return tls.Client(conn, TLSConfig), nil
+		return tls.Client(conn, &tls.Config{
+			ServerName:         getServerName(address),
+			InsecureSkipVerify: !h.https,
+		}), nil
+	}
 }

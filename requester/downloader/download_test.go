@@ -14,6 +14,12 @@ var (
 	url2 = "https://git.oschina.net/lufenping/pixabay_img/raw/master/tiny-20170712/lizard-2427248_1920.jpg"
 )
 
+func TestRandomNumber(t *testing.T) {
+	for i := 0; i < 10; i++ {
+		fmt.Println(RandomNumber(0, 5))
+	}
+}
+
 func TestExample(t *testing.T) {
 	DoDownload(url2, "lizard-2427248_1920.jpg", nil)
 }
@@ -45,9 +51,14 @@ func TestDownloadTIM(t *testing.T) {
 		d.Pause()
 		time.Sleep(5e9)
 		d.Resume()
-		time.Sleep(6e9)
-		// d.Cancel()
-		time.Sleep(2e9)
+		time.Sleep(9e9)
+		d.Pause()
+		time.Sleep(5e9)
+		d.Resume()
+		time.Sleep(3e9)
+		d.Cancel()
+		fmt.Println("canceled")
+		time.Sleep(3e9)
 	}()
 	err := d.Execute()
 	if err != nil {

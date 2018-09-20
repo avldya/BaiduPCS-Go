@@ -3,10 +3,9 @@ package pcscommand
 import (
 	"fmt"
 	"github.com/iikira/BaiduPCS-Go/baidupcs"
-	"github.com/iikira/BaiduPCS-Go/internal/pcsconfig"
+	"github.com/iikira/BaiduPCS-Go/baidupcs/pcserror"
 	"github.com/iikira/BaiduPCS-Go/pcspath"
 	"github.com/iikira/BaiduPCS-Go/pcsutil/waitgroup"
-	"github.com/iikira/BaiduPCS-Go/requester"
 	fpath "path"
 	"regexp"
 	"strings"
@@ -22,11 +21,6 @@ type ListTask struct {
 	ID       int // 任务id
 	MaxRetry int // 最大重试次数
 	retry    int // 任务失败的重试次数
-}
-
-func setupHTTPClient(client *requester.HTTPClient) {
-	client.SetUserAgent(pcsconfig.Config.UserAgent)
-	client.SetHTTPSecure(pcsconfig.Config.EnableHTTPS)
 }
 
 // getAllAbsPaths 获取所有绝对路径
@@ -56,7 +50,7 @@ func getAbsPath(path string) (first string, err error) {
 
 // parsePath 解析通配符
 func parsePath(path string) (paths []string, err error) {
-	pcsPath := pcspath.NewPCSPath(&pcsconfig.Config.MustGetActive().Workdir, path)
+	pcsPath := pcspath.NewPCSPath(&GetActiveUser().Workdir, path)
 	path = pcsPath.AbsPathNoMatch()
 
 	if patternRE.MatchString(path) {
@@ -77,10 +71,10 @@ func parsePath(path string) (paths []string, err error) {
 }
 
 // recurseParsePath 递归解析通配符
-func recurseParsePath(path string) (paths []string, err baidupcs.Error) {
+func recurseParsePath(path string) (paths []string, err pcserror.Error) {
 	if !patternRE.MatchString(path) {
 		// 检测路径是否存在
-		_, err = info.FilesDirectoriesMeta(path)
+		_, err = GetBaiduPCS().FilesDirectoriesMeta(path)
 		if err != nil {
 			return nil, nil
 		}
@@ -96,7 +90,7 @@ func recurseParsePath(path string) (paths []string, err baidupcs.Error) {
 			continue
 		}
 
-		pfiles, err := info.FilesDirectoriesList(strings.Join(names[:k], ""))
+		pfiles, err := GetBaiduPCS().FilesDirectoriesList(strings.Join(names[:k], ""), baidupcs.DefaultOrderOptions)
 		if err != nil {
 			return nil, err
 		}

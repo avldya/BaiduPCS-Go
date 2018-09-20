@@ -2,6 +2,7 @@ package pcscommand
 
 import (
 	"fmt"
+	"github.com/iikira/BaiduPCS-Go/baidupcs"
 )
 
 // RunCloudDlAddTask 执行添加离线下载任务
@@ -15,7 +16,7 @@ func RunCloudDlAddTask(sourceURLs []string, savePath string) {
 
 	var taskid int64
 	for k := range sourceURLs {
-		taskid, err = info.CloudDlAddTask(sourceURLs[k], savePath+"/")
+		taskid, err = GetBaiduPCS().CloudDlAddTask(sourceURLs[k], savePath+"/")
 		if err != nil {
 			fmt.Printf("[%d] %s, 地址: %s\n", k+1, err, sourceURLs[k])
 			continue
@@ -27,7 +28,7 @@ func RunCloudDlAddTask(sourceURLs []string, savePath string) {
 
 // RunCloudDlQueryTask 精确查询离线下载任务
 func RunCloudDlQueryTask(taskIDs []int64) {
-	cl, err := info.CloudDlQueryTask(taskIDs)
+	cl, err := GetBaiduPCS().CloudDlQueryTask(taskIDs)
 	if err != nil {
 		fmt.Printf("%s\n", err)
 		return
@@ -38,7 +39,7 @@ func RunCloudDlQueryTask(taskIDs []int64) {
 
 // RunCloudDlListTask 查询离线下载任务列表
 func RunCloudDlListTask() {
-	cl, err := info.CloudDlListTask()
+	cl, err := GetBaiduPCS().CloudDlListTask()
 	if err != nil {
 		fmt.Printf("%s\n", err)
 		return
@@ -50,7 +51,7 @@ func RunCloudDlListTask() {
 // RunCloudDlCancelTask 取消离线下载任务
 func RunCloudDlCancelTask(taskIDs []int64) {
 	for _, id := range taskIDs {
-		err := info.CloudDlCancelTask(id)
+		err := GetBaiduPCS().CloudDlCancelTask(id)
 		if err != nil {
 			fmt.Printf("[%d] %s\n", id, err)
 			continue
@@ -63,7 +64,7 @@ func RunCloudDlCancelTask(taskIDs []int64) {
 // RunCloudDlDeleteTask 删除离线下载任务
 func RunCloudDlDeleteTask(taskIDs []int64) {
 	for _, id := range taskIDs {
-		err := info.CloudDlDeleteTask(id)
+		err := GetBaiduPCS().CloudDlDeleteTask(id)
 		if err != nil {
 			fmt.Printf("[%d] %s\n", id, err)
 			continue
@@ -71,4 +72,16 @@ func RunCloudDlDeleteTask(taskIDs []int64) {
 
 		fmt.Printf("[%d] 删除成功\n", id)
 	}
+}
+
+// RunCloudDlClearTask 清空离线下载任务记录
+func RunCloudDlClearTask() {
+	total, err := GetBaiduPCS().CloudDlClearTask()
+	if err != nil {
+		fmt.Printf("%s\n", err)
+		return
+	}
+
+	fmt.Printf("%s成功, 共清除 %d 条记录\n", baidupcs.OperationCloudDlClearTask, total)
+	return
 }

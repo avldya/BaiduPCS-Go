@@ -27,17 +27,25 @@ type ReaderLen64 interface {
 	Lener64
 }
 
+// ReaderAtLen64 实现io.ReaderAt和64-bit长度接口
+type ReaderAtLen64 interface {
+	io.ReaderAt
+	Lener64
+}
+
 // WriterLen64 实现io.Writer和64-bit长度接口
 type WriterLen64 interface {
 	io.Writer
 	Lener64
 }
 
+// WriteCloserAt 实现io.WriteCloser和io.WriterAt接口
 type WriteCloserAt interface {
 	io.WriteCloser
 	io.WriterAt
 }
 
+// WriteCloserLen64At 实现rio.WriteCloserAt和64-bit长度接口
 type WriteCloserLen64At interface {
 	WriteCloserAt
 	Lener64

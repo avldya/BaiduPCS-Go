@@ -2,16 +2,15 @@ package downloader
 
 import (
 	"fmt"
-	"github.com/iikira/BaiduPCS-Go/pcsutil"
-	"github.com/iikira/BaiduPCS-Go/requester/rio"
+	"github.com/iikira/BaiduPCS-Go/pcsutil/converter"
+	"io"
 	"os"
-	"time"
 )
 
 // DoDownload 执行下载
 func DoDownload(durl string, savePath string, cfg *Config) {
 	var (
-		file rio.WriteCloserAt
+		file io.WriterAt
 		err  error
 	)
 
@@ -21,6 +20,8 @@ func DoDownload(durl string, savePath string, cfg *Config) {
 			fmt.Println(err)
 			return
 		}
+	} else {
+		file = nil
 	}
 
 	download := NewDownloader(durl, file, cfg)
@@ -39,31 +40,21 @@ func DoDownload(durl string, savePath string, cfg *Config) {
 				}
 
 				if v.TotalSize() <= 0 {
-					ts = pcsutil.ConvertFileSize(v.Downloaded(), 2)
+					ts = converter.ConvertFileSize(v.Downloaded(), 2)
 				} else {
-					ts = pcsutil.ConvertFileSize(v.TotalSize(), 2)
+					ts = converter.ConvertFileSize(v.TotalSize(), 2)
 				}
 
-				fmt.Printf("\r↓ %s/%s %s/s in %s ............",
-					pcsutil.ConvertFileSize(v.Downloaded(), 2),
+				fmt.Printf("\r ↓ %s/%s %s/s in %s ............",
+					converter.ConvertFileSize(v.Downloaded(), 2),
 					ts,
-					pcsutil.ConvertFileSize(v.SpeedsPerSecond(), 2),
+					converter.ConvertFileSize(v.SpeedsPerSecond(), 2),
 					v.TimeElapsed(),
 				)
 			}
 		}
 	})
 
-	download.OnFinish(func() {
-		exitDownloadFunc <- struct{}{}
-	})
-
-	go func() {
-		for {
-			download.PrintAllWorkers()
-			time.Sleep(1e9)
-		}
-	}()
 	download.Execute()
-	<-exitDownloadFunc
+	close(exitDownloadFunc)
 }

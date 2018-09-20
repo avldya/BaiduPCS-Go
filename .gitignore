@@ -4,6 +4,7 @@
 *.so
 *.dylib
 BaiduPCS-Go
+cmd/AndroidNDKBuild/AndroidNDKBuild
 
 # Test binary, build with `go test -c`
 *.test
@@ -25,6 +26,7 @@ captcha.png
 pcs_config.json
 test/
 download/
+*-downloading
 
 # GoLand
 .idea/

@@ -3,7 +3,7 @@ package pcscommand
 import (
 	"fmt"
 	"github.com/iikira/BaiduPCS-Go/baidupcs"
-	"github.com/iikira/BaiduPCS-Go/internal/pcsconfig"
+	"github.com/iikira/BaiduPCS-Go/baidupcs/pcserror"
 	"github.com/iikira/BaiduPCS-Go/pcspath"
 	"path"
 )
@@ -33,7 +33,7 @@ func runCpMvOp(op string, paths ...string) {
 		return
 	}
 
-	pcsPath := pcspath.NewPCSPath(&pcsconfig.Config.MustGetActive().Workdir, to)
+	pcsPath := pcspath.NewPCSPath(&GetActiveUser().Workdir, to)
 	to = pcsPath.AbsPathNoMatch()
 
 	// 尝试匹配
@@ -51,8 +51,12 @@ func runCpMvOp(op string, paths ...string) {
 		}
 	}
 
-	toInfo, err := info.FilesDirectoriesMeta(to)
-	if err != nil {
+	pcs := GetBaiduPCS()
+	toInfo, pcsError := pcs.FilesDirectoriesMeta(to)
+	switch {
+	case toInfo != nil && toInfo.Path != to:
+		fallthrough
+	case pcsError != nil && pcsError.GetErrType() == pcserror.ErrTypeRemoteError:
 		// 判断路径是否存在
 		// 如果不存在, 则为重命名或同目录拷贝操作
 
@@ -63,7 +67,7 @@ func runCpMvOp(op string, paths ...string) {
 		}
 
 		if op == "copy" { // 拷贝
-			err = info.Copy(&baidupcs.CpMvJSON{
+			err = pcs.Copy(&baidupcs.CpMvJSON{
 				From: froms[0],
 				To:   to,
 			})
@@ -76,7 +80,7 @@ func runCpMvOp(op string, paths ...string) {
 			fmt.Println("文件/目录拷贝成功: ")
 			fmt.Printf("%s <-> %s\n", froms[0], to)
 		} else { // 重命名
-			err = info.Rename(froms[0], to)
+			err = pcs.Rename(froms[0], to)
 			if err != nil {
 				fmt.Println(err)
 				fmt.Println("重命名失败: ")
@@ -86,6 +90,9 @@ func runCpMvOp(op string, paths ...string) {
 			fmt.Println("重命名成功: ")
 			fmt.Printf("%s -> %s\n", froms[0], to)
 		}
+		return
+	case pcsError != nil && pcsError.GetErrType() != pcserror.ErrTypeRemoteError:
+		fmt.Println(pcsError)
 		return
 	}
 
@@ -105,7 +112,7 @@ func runCpMvOp(op string, paths ...string) {
 
 	switch op {
 	case "copy":
-		err = info.Copy(cj.List...)
+		err = pcs.Copy(cj.List...)
 		if err != nil {
 			fmt.Println(err)
 			fmt.Println("操作失败, 以下文件/目录拷贝失败: ")
@@ -115,7 +122,7 @@ func runCpMvOp(op string, paths ...string) {
 		fmt.Println("操作成功, 以下文件/目录拷贝成功: ")
 		fmt.Println(cj)
 	case "move":
-		err = info.Move(cj.List...)
+		err = pcs.Move(cj.List...)
 		if err != nil {
 			fmt.Println(err)
 			fmt.Println("操作失败, 以下文件/目录移动失败: ")
